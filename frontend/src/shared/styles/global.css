@@ -56,3 +56,32 @@ p{margin:0 0 10px}
 @media (max-width:980px){.grid-4{grid-template-columns:repeat(2,1fr)}.header__nav{display:none}}
 @media (max-width:760px){.hero,.grid-2{grid-template-columns:1fr}.hero{padding-top:28px;gap:36px}.perks{flex-direction:column}}
 @media (max-width:480px){.grid-4{grid-template-columns:1fr}}
+
+/* ---- Формы и авторизация ---- */
+.btn--block{width:100%;justify-content:center;height:48px;font-size:15px}
+.btn:disabled{opacity:.6;cursor:wait}
+.logo--inverted .logo__mark{background:var(--brand-ink);color:var(--brand)}
+.logo--inverted{color:inherit}
+.field{margin-bottom:16px}
+.field label{display:block;font-weight:500;font-size:13px;margin-bottom:6px}
+.field__box{position:relative}
+.field input:not([type="checkbox"]),.field select{width:100%;height:46px;padding:0 14px;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--ink);font:inherit}
+.field__box--pw input{padding-right:84px}
+.field input[aria-invalid="true"]{border-color:#b3382c}
+.field__toggle{position:absolute;right:6px;top:6px;height:34px;border:0;background:none;color:var(--muted);cursor:pointer;padding:0 10px;font:inherit;font-size:13px}
+.field__hint{font-size:12px;color:var(--muted);margin-top:5px}
+.field__err{color:#b3382c;font-size:13px;margin-top:5px}
+.check{display:flex;gap:10px;align-items:flex-start;font-size:13px;color:var(--muted)}
+.check input{width:18px;height:18px;margin-top:2px;accent-color:var(--brand)}
+.check label{font-weight:400;margin:0}
+.link-btn{border:0;background:none;padding:0;color:var(--brand);font:inherit;text-decoration:underline;cursor:pointer}
+.alert{background:var(--soft);border-radius:10px;padding:12px 14px;margin-bottom:16px;font-size:14px}
+.alert--bad{color:#b3382c}
+.meter{height:4px;border-radius:2px;background:var(--line);margin-top:8px;overflow:hidden}
+.meter b{display:block;height:100%;background:var(--brand);transition:width .2s}
+@media (prefers-reduced-motion:reduce){.meter b{transition:none}}
+
+/* ---- Меню пользователя в шапке ---- */
+.usermenu{position:relative}
+.usermenu__panel{position:absolute;right:0;top:46px;min-width:240px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);box-shadow:0 8px 24px rgba(31,58,46,.15);padding:16px;display:grid;gap:6px;font-size:14px;z-index:20}
+.usermenu__out{margin-top:8px;height:38px;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--ink);font:600 14px inherit;font-family:inherit;cursor:pointer}
