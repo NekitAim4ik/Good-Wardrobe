@@ -1,7 +1,7 @@
-import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 import * as userApi from '../../entities/user/api'
 import type { User } from '../../entities/user/model'
-import { clearSession, loadSession, saveSession } from './session'
+import { setSessionLostHandler } from '../../shared/api/http'
 import type { LoginValues, RegisterValues } from './validation'
 
 interface AuthValue {
@@ -14,26 +14,40 @@ interface AuthValue {
 const AuthContext = createContext<AuthValue | null>(null)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(loadSession)
+  const [user, setUser] = useState<User | null>(null)
+  const [ready, setReady] = useState(false) 
+
+  useEffect(() => {
+    let alive = true
+    userApi.refresh().then((u) => {
+      if (!alive) return
+      setUser(u)
+      setReady(true)
+    })
+    return () => { alive = false }
+  }, [])
+
+  useEffect(() => {
+    setSessionLostHandler(() => setUser(null))
+    return () => setSessionLostHandler(null)
+  }, [])
 
   const login = useCallback(async (v: LoginValues, remember: boolean) => {
-    const u = await userApi.login({ email: v.email, password: v.password })
-    saveSession(u, remember)
-    setUser(u)
+    setUser(await userApi.login({ email: v.email, password: v.password, remember }))
   }, [])
 
   const register = useCallback(async (v: RegisterValues) => {
-    const u = await userApi.register({ name: v.name, email: v.email, password: v.password, role: v.role })
-    saveSession(u, true)
-    setUser(u)
+    setUser(await userApi.register({ name: v.name, email: v.email, password: v.password, role: v.role }))
   }, [])
 
   const logout = useCallback(() => {
-    clearSession()
     setUser(null)
+    void userApi.logout()
   }, [])
 
   const value = useMemo(() => ({ user, login, register, logout }), [user, login, register, logout])
+
+  if (!ready) return <div className="boot" role="status">Загрузка…</div>
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }
 

@@ -1,54 +1,43 @@
-import { ApiError } from '../../shared/api/apierror'
+import { http, setAccessToken, setRefresher } from '../../shared/api/http'
 import type { RegisterRole, User } from './model'
 
-// TODO: backend, потом переписать функции на API запросы
-
-interface StoredUser extends User { password: string }
-
-const KEY = 'dsh_users'
-const wait = (ms: number) => new Promise((r) => setTimeout(r, ms))
-
-function readUsers(): StoredUser[] {
-  try {
-    const raw = localStorage.getItem(KEY)
-    return raw ? (JSON.parse(raw) as StoredUser[]) : []
-  } catch {
-    return []
-  }
-}
-
-function writeUsers(users: StoredUser[]) {
-  try { localStorage.setItem(KEY, JSON.stringify(users)) } catch { /* хранилище недоступно */ }
-}
-
-const toPublic = ({ password: _password, ...user }: StoredUser): User => user
 
 export interface RegisterInput { name: string; email: string; password: string; role: RegisterRole }
-export interface LoginInput { email: string; password: string }
+export interface LoginInput { email: string; password: string; remember: boolean }
 
-export async function register(input: RegisterInput): Promise<User> {
-  await wait(500)
-  const email = input.email.trim().toLowerCase()
-  const users = readUsers()
-  if (users.some((u) => u.email === email)) {
-    throw new ApiError('Эта почта уже зарегистрирована. Войдите в аккаунт.', 'email')
-  }
-  const user: StoredUser = {
-    id: Date.now(),
-    name: input.name.trim(),
-    email,
-    password: input.password,
-    role: input.role,
-    points: 0,
-  }
-  writeUsers([...users, user])
-  return toPublic(user)
+interface AuthResult { user: User; accessToken: string }
+
+function accept(result: AuthResult): User {
+  setAccessToken(result.accessToken)
+  return result.user
 }
 
-export async function login(input: LoginInput): Promise<User> {
-  await wait(500)
-  const email = input.email.trim().toLowerCase()
-  const user = readUsers().find((u) => u.email === email && u.password === input.password)
-  if (!user) throw new ApiError('Неверная почта или пароль. Проверьте данные и попробуйте снова.')
-  return toPublic(user)
+export const register = (input: RegisterInput) =>
+  http<AuthResult>('/auth/register', { method: 'POST', body: input, auth: false }).then(accept)
+
+export const login = (input: LoginInput) =>
+  http<AuthResult>('/auth/login', { method: 'POST', body: input, auth: false }).then(accept)
+
+let pending: Promise<User | null> | null = null
+export function refresh(): Promise<User | null> {
+  if (!pending) {
+    pending = http<AuthResult>('/auth/refresh', { method: 'POST', auth: false })
+      .then(accept)
+      .catch(() => {
+        setAccessToken(null)
+        return null
+      })
+      .finally(() => { pending = null })
+  }
+  return pending
 }
+
+export async function logout(): Promise<void> {
+  setAccessToken(null)
+  try {
+    await http('/auth/logout', { method: 'POST', auth: false })
+  } catch {
+  }
+}
+
+setRefresher(async () => (await refresh()) !== null)
