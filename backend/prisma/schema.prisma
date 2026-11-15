@@ -7,6 +7,8 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// ───────────── Пользователи (модуль auth) ─────────────
+
 enum Role {
   user
   volunteer
@@ -15,26 +17,382 @@ enum Role {
 }
 
 model User {
-  id            Int            @id @default(autoincrement())
-  email         String         @unique 
-  name          String
-  passwordHash  String         
-  role          Role           @default(user)
-  points        Int            @default(0)
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
-  refreshTokens RefreshToken[]
+  id           Int      @id @default(autoincrement())
+  email        String   @unique // хранится в нижнем регистре
+  name         String
+  passwordHash String // argon2id; сам пароль не хранится нигде
+  role         Role     @default(user)
+  points       Int      @default(0) // обычные баллы; меняются ТОЛЬКО через PointsEntry
+  dobroPoints  Int      @default(0) // Добро-баллы (волонтёрство, награды); меняются ТОЛЬКО через PointsEntry
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  refreshTokens   RefreshToken[]
+  items           Item[]          @relation("ItemOwner")
+  dealsAsGiver    Deal[]          @relation("DealGiver")
+  dealsAsReceiver Deal[]          @relation("DealReceiver")
+  dealsCancelled  Deal[]          @relation("DealCancelledBy")
+  messages        Message[]
+  reviewsWritten  Review[]        @relation("ReviewAuthor")
+  reviewsReceived Review[]        @relation("ReviewTarget")
+  reports         Report[]        @relation("ReportReporter")
+  reportsResolved Report[]        @relation("ReportResolver")
+  pointsEntries   PointsEntry[]   @relation("PointsOwner")
+  pointsGranted   PointsEntry[]   @relation("PointsCreator")
+  ecoRecords      EcoRecord[]
+  notifications   Notification[]
 }
 
+// Refresh-токен хранится только в виде SHA-256-хеша: утечка БД не даёт войти в аккаунт.
+// Токен одноразовый: при обновлении старый помечается revokedAt и выдаётся новый.
 model RefreshToken {
   id         String    @id @default(uuid())
   tokenHash  String    @unique
   userId     Int
   user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  persistent Boolean   @default(false) 
+  persistent Boolean   @default(false) // true — «запомнить меня» (долгий cookie)
   expiresAt  DateTime
   revokedAt  DateTime?
   createdAt  DateTime  @default(now())
 
   @@index([userId])
+}
+
+// ───────────── Справочники (FR-ADM-03; первичное наполнение — prisma/seed.ts) ─────────────
+
+model City {
+  id        Int        @id @default(autoincrement())
+  name      String     @unique
+  isTest    Boolean    @default(false) // тестовые данные не смешиваются с боевыми (FR-ADM-08)
+  districts District[]
+}
+
+model District {
+  id     Int    @id @default(autoincrement())
+  cityId Int
+  city   City   @relation(fields: [cityId], references: [id])
+  name   String
+  items  Item[]
+
+  @@unique([cityId, name])
+}
+
+model Category {
+  id           Int              @id @default(autoincrement())
+  slug         String           @unique
+  name         String
+  examples     String? // подсказка в форме: «Футболки, брюки, куртки»
+  sortOrder    Int              @default(0)
+  isActive     Boolean          @default(true)
+  items        Item[]
+  coefficients EcoCoefficient[]
+  ecoRecords   EcoRecord[]
+}
+
+// Коэффициенты для расчёта массы и CO₂e (таблица в разделе 3.4 ТЗ).
+// Строки НЕ редактируются: новое значение = новая версия (version), старые записи EcoRecord
+// продолжают ссылаться на прежнюю — расчёт воспроизводим (FR-ECO-04, AC-ECO-01).
+model EcoCoefficient {
+  id         Int         @id @default(autoincrement())
+  categoryId Int
+  category   Category    @relation(fields: [categoryId], references: [id])
+  avgMassKg  Float? // m_кат, кг/шт.; null — нормативной массы нет, вес вещи обязателен
+  co2PerKg   Float // k_кат, кг CO₂e на кг
+  version    Int
+  source     String // откуда значение
+  validFrom  DateTime
+  ecoRecords EcoRecord[]
+
+  @@unique([categoryId, version])
+  @@index([categoryId, validFrom])
+}
+
+// ───────────── Вещи ─────────────
+
+enum ItemSource {
+  direct // объявление пользователя (P2P)
+  point // вещь в офлайн-пункте (появится вместе с модулем пунктов)
+}
+
+enum ItemStatus {
+  published // опубликовано
+  reserved // зарезервировано / в процессе передачи
+  transferred // передано
+  hidden // скрыто автором или модерацией
+  rejected // отклонено модератором
+}
+
+enum ItemCondition {
+  brand_new
+  excellent
+  good
+  fair
+}
+
+enum TransferFormat {
+  gift // даром
+  exchange // обмен
+}
+
+model Item {
+  id             Int            @id @default(autoincrement())
+  ownerId        Int
+  owner          User           @relation("ItemOwner", fields: [ownerId], references: [id])
+  source         ItemSource     @default(direct)
+  status         ItemStatus     @default(published)
+  title          String         @db.VarChar(100)
+  description    String         @db.VarChar(2000)
+  categoryId     Int
+  category       Category       @relation(fields: [categoryId], references: [id])
+  condition      ItemCondition
+  transferFormat TransferFormat
+  wantedInReturn String?        @db.VarChar(300) // что хочет взамен (только для exchange)
+  quantity       Int            @default(1) // n в формуле массы
+  weightKg       Float? // фактический общий вес всех вещей объявления, если известен
+  districtId     Int
+  district       District       @relation(fields: [districtId], references: [id])
+  meetingNote    String?        @db.VarChar(300) // «у метро», «у подъезда» — без точного адреса (BR-LIST-02)
+  moderationNote String?        @db.VarChar(500) // причина скрытия/отклонения модератором
+  publishedAt    DateTime       @default(now())
+  closedAt       DateTime? // когда стало «передано»
+  deletedAt      DateTime? // мягкое удаление: история сделок не стирается (BR-MOD-01)
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  photos  ItemPhoto[]
+  deals   Deal[]
+  reports Report[]
+
+  @@index([status, categoryId])
+  @@index([status, publishedAt])
+  @@index([districtId, status])
+  @@index([ownerId])
+}
+
+model ItemPhoto {
+  id        Int      @id @default(autoincrement())
+  itemId    Int
+  item      Item     @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  url       String
+  position  Int      @default(0) // 0 — обложка карточки
+  createdAt DateTime @default(now())
+
+  @@index([itemId, position])
+}
+
+// ───────────── Сделки и чат (P2P) ─────────────
+
+enum DealStatus {
+  requested // запрос создан
+  negotiating // условия согласуются
+  awaiting_handover // ожидается передача
+  awaiting_receiver_confirmation // ожидается подтверждение получателя
+  completed // завершена
+  cancelled // отменена
+  in_review // на рассмотрении (спор, решает модератор)
+}
+
+enum CancelReason {
+  changed_mind
+  no_response
+  item_unavailable
+  no_show
+  other
+}
+
+// Одна сделка = одна пара «вещь + получатель». Чат живёт внутри сделки,
+// сделка создаётся первым сообщением автору объявления (FR-DEAL-01).
+model Deal {
+  id            Int          @id @default(autoincrement())
+  itemId        Int
+  item          Item         @relation(fields: [itemId], references: [id])
+  giverId       Int // автор объявления
+  giver         User         @relation("DealGiver", fields: [giverId], references: [id])
+  receiverId    Int // тот, кто написал по объявлению
+  receiver      User         @relation("DealReceiver", fields: [receiverId], references: [id])
+  status        DealStatus   @default(requested)
+  meetingAt     DateTime? // договорённое время встречи
+  meetingNote   String?      @db.VarChar(300)
+  handedOverAt  DateTime? // отдающий отметил передачу
+  completedAt   DateTime? // получатель подтвердил — только после этого эко-эффект и отзывы
+  cancelledAt   DateTime?
+  cancelledById Int?
+  cancelledBy   User?        @relation("DealCancelledBy", fields: [cancelledById], references: [id])
+  cancelReason  CancelReason?
+  cancelComment String?      @db.VarChar(500)
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  messages      Message[]
+  reviews       Review[]
+  reports       Report[]
+  ecoRecord     EcoRecord?
+  pointsEntries PointsEntry[]
+
+  @@index([itemId, status])
+  @@index([giverId, status])
+  @@index([receiverId, status])
+  // Ограничения, которые Prisma выразить не умеет (частичные уникальные индексы),
+  // лежат в prisma/sql/items_constraints.sql
+}
+
+enum MessageKind {
+  text
+  system // «Автор отметил передачу», «Сделка отменена» — системные события в ленте чата
+}
+
+model Message {
+  id        Int         @id @default(autoincrement())
+  dealId    Int
+  deal      Deal        @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  senderId  Int? // null для системных сообщений
+  sender    User?       @relation(fields: [senderId], references: [id])
+  kind      MessageKind @default(text)
+  body      String      @db.VarChar(2000)
+  readAt    DateTime? // когда прочитал второй участник
+  createdAt DateTime    @default(now())
+
+  @@index([dealId, createdAt])
+}
+
+model Review {
+  id        Int      @id @default(autoincrement())
+  dealId    Int
+  deal      Deal     @relation(fields: [dealId], references: [id])
+  authorId  Int
+  author    User     @relation("ReviewAuthor", fields: [authorId], references: [id])
+  targetId  Int
+  target    User     @relation("ReviewTarget", fields: [targetId], references: [id])
+  rating    Int // 1..5 (CHECK в items_constraints.sql); рейтинг по методике — позже (FR-REV-02)
+  text      String?  @db.VarChar(1000)
+  isHidden  Boolean  @default(false) // скрыт модератором, запись остаётся
+  createdAt DateTime @default(now())
+
+  @@unique([dealId, authorId]) // один отзыв на участника по сделке (FR-REV-01)
+  @@index([targetId])
+}
+
+// ───────────── Жалобы и модерация ─────────────
+
+enum ReportReason {
+  prohibited_item
+  fake_or_scam
+  offensive
+  spam
+  other
+}
+
+enum ReportStatus {
+  open
+  resolved
+  dismissed
+}
+
+// В MVP — жалоба на объявление (FR-LIST-07); спор по сделке разбирается через неё же, с указанием dealId.
+model Report {
+  id           Int          @id @default(autoincrement())
+  reporterId   Int
+  reporter     User         @relation("ReportReporter", fields: [reporterId], references: [id])
+  itemId       Int
+  item         Item         @relation(fields: [itemId], references: [id])
+  dealId       Int?
+  deal         Deal?        @relation(fields: [dealId], references: [id])
+  reason       ReportReason
+  comment      String?      @db.VarChar(1000)
+  status       ReportStatus @default(open)
+  resolution   String?      @db.VarChar(1000) // основание решения (BR-MOD-01)
+  resolvedById Int?
+  resolvedBy   User?        @relation("ReportResolver", fields: [resolvedById], references: [id])
+  resolvedAt   DateTime?
+  createdAt    DateTime     @default(now())
+
+  @@index([status, createdAt])
+  @@index([itemId])
+}
+
+// ───────────── Баллы и экологический эффект ─────────────
+
+enum PointsCurrency {
+  points // обычные баллы
+  dobro // Добро-баллы
+}
+
+enum PointsReason {
+  p2p_give // отдал вещь (+)
+  p2p_receive // получил вещь (−)
+  drop_off // сдал вещи в пункт (+)
+  pickup // получил вещь в пункте (−)
+  volunteer_shift // смена волонтёра (+ Добро-баллы)
+  reward // награда партнёра (− Добро-баллы)
+  adjustment // ручная корректировка администратором
+  refund // возврат
+}
+
+// Неизменяемый журнал (BR-PTS-01): строки только добавляются, баланс в User меняется
+// в той же транзакции. operationKey делает операцию идемпотентной (NFR-REL-01):
+// повторный запрос упирается в уникальный индекс и не создаёт второй записи.
+model PointsEntry {
+  id           Int            @id @default(autoincrement())
+  userId       Int
+  user         User           @relation("PointsOwner", fields: [userId], references: [id])
+  currency     PointsCurrency @default(points)
+  amount       Int // со знаком: + начисление, − списание
+  reason       PointsReason
+  operationKey String         @unique // например "deal:42:p2p_give"
+  dealId       Int?
+  deal         Deal?          @relation(fields: [dealId], references: [id])
+  createdById  Int? // кто выполнил (сотрудник, администратор); null — система
+  createdBy    User?          @relation("PointsCreator", fields: [createdById], references: [id])
+  comment      String?        @db.VarChar(300)
+  createdAt    DateTime       @default(now())
+
+  @@index([userId, createdAt])
+}
+
+enum WeightSource {
+  actual // указан фактический вес
+  estimated // посчитано по нормативной массе категории (помечается в интерфейсе как оценка)
+}
+
+// Результат расчёта по завершённой сделке. dealId @unique — одна передача считается ровно один раз (BR-ECO-02).
+model EcoRecord {
+  id            Int            @id @default(autoincrement())
+  dealId        Int            @unique
+  deal          Deal           @relation(fields: [dealId], references: [id])
+  userId        Int // кому засчитан вклад (отдающий)
+  user          User           @relation(fields: [userId], references: [id])
+  categoryId    Int
+  category      Category       @relation(fields: [categoryId], references: [id])
+  coefficientId Int // какая версия коэффициентов применена
+  coefficient   EcoCoefficient @relation(fields: [coefficientId], references: [id])
+  quantity      Int
+  massKg        Float // M
+  massSource    WeightSource
+  co2eKg        Float // CO₂e = M · k
+  calculatedAt  DateTime       @default(now())
+
+  @@index([userId])
+}
+
+// ───────────── Уведомления (после ядра, FR-ACC-02/04) ─────────────
+
+enum NotificationType {
+  deal_requested
+  new_message
+  deal_status_changed
+  review_received
+  points_changed
+}
+
+model Notification {
+  id        Int              @id @default(autoincrement())
+  userId    Int
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      NotificationType
+  dealId    Int?
+  itemId    Int?
+  readAt    DateTime?
+  createdAt DateTime         @default(now())
+
+  @@index([userId, readAt])
 }
