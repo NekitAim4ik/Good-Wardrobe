@@ -5,8 +5,11 @@ import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler'
 import { AuthModule } from './auth/auth.module'
 import { JwtAuthGuard } from './auth/guards/jwtauth.guard'
 import { RolesGuard } from './auth/guards/roles.guard'
+import { CatalogModule } from './catalog/catalog.module'
 import { validateEnv } from './config/env'
+import { ItemsModule } from './items/items.module'
 import { PrismaModule } from './prisma/prisma.module'
+import { UploadsModule } from './uploads/uploads.module'
 import { UsersModule } from './users/users.module'
 
 @Module({
@@ -16,6 +19,9 @@ import { UsersModule } from './users/users.module'
     PrismaModule,
     UsersModule,
     AuthModule,
+    CatalogModule,
+    UploadsModule,
+    ItemsModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: ThrottlerGuard },

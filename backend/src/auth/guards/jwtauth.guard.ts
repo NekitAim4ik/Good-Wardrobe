@@ -4,6 +4,7 @@ import { JwtService } from '@nestjs/jwt'
 import { AccessPayload, AuthenticatedRequest } from '../auth.types'
 import { IS_PUBLIC_KEY } from '../decorators/public.decorator'
 
+
 @Injectable()
 export class JwtAuthGuard implements CanActivate {
   constructor(
@@ -13,11 +14,13 @@ export class JwtAuthGuard implements CanActivate {
 
   async canActivate(ctx: ExecutionContext): Promise<boolean> {
     const isPublic = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, [ctx.getHandler(), ctx.getClass()])
-    if (isPublic) return true
-
     const req = ctx.switchToHttp().getRequest<AuthenticatedRequest>()
     const [type, token] = req.headers.authorization?.split(' ') ?? []
-    if (type !== 'Bearer' || !token) throw new UnauthorizedException('Требуется вход в аккаунт.')
+
+    if (type !== 'Bearer' || !token) {
+      if (isPublic) return true
+      throw new UnauthorizedException('Требуется вход в аккаунт.')
+    }
 
     try {
       const payload = await this.jwt.verifyAsync<AccessPayload>(token)

@@ -6,6 +6,7 @@ export interface Env {
   ACCESS_TTL_SECONDS: number
   REFRESH_TTL_DAYS: number
   CORS_ORIGIN: string
+  UPLOADS_DIR: string
 }
 
 export function validateEnv(raw: Record<string, unknown>): Env {
@@ -44,6 +45,7 @@ export function validateEnv(raw: Record<string, unknown>): Env {
     ACCESS_TTL_SECONDS: int('ACCESS_TTL_SECONDS', 900, 60),
     REFRESH_TTL_DAYS: int('REFRESH_TTL_DAYS', 30),
     CORS_ORIGIN: text('CORS_ORIGIN', 'http://localhost:5173'),
+    UPLOADS_DIR: text('UPLOADS_DIR', 'uploads'),
   }
 
   if (errors.length) throw new Error(`Неверная конфигурация (.env):\n- ${errors.join('\n- ')}`)
