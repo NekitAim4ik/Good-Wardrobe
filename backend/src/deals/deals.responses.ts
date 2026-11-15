@@ -62,3 +62,9 @@ export interface DealDetailsDto {
   eco: EcoResultDto | null
   pointsDelta: number | null 
 }
+
+export interface DealCreatedDto {
+  id: number
+  status: DealStatus
+  created: boolean
+}

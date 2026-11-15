@@ -6,6 +6,7 @@ import { AuthModule } from './auth/auth.module'
 import { JwtAuthGuard } from './auth/guards/jwtauth.guard'
 import { RolesGuard } from './auth/guards/roles.guard'
 import { CatalogModule } from './catalog/catalog.module'
+import { DealsModule } from './deals/deals.module'
 import { validateEnv } from './config/env'
 import { ItemsModule } from './items/items.module'
 import { PrismaModule } from './prisma/prisma.module'
@@ -22,6 +23,7 @@ import { UsersModule } from './users/users.module'
     CatalogModule,
     UploadsModule,
     ItemsModule,
+    DealsModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: ThrottlerGuard },

@@ -66,6 +66,8 @@ p{margin:0 0 10px}
 .field label{display:block;font-weight:500;font-size:13px;margin-bottom:6px}
 .field__box{position:relative}
 .field input:not([type="checkbox"]),.field select{width:100%;height:46px;padding:0 14px;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--ink);font:inherit}
+.field textarea{width:100%;min-height:110px;padding:12px 14px;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--ink);font:inherit;resize:vertical}
+.field textarea[aria-invalid="true"]{border-color:#b3382c}
 .field__box--pw input{padding-right:84px}
 .field input[aria-invalid="true"]{border-color:#b3382c}
 .field__toggle{position:absolute;right:6px;top:6px;height:34px;border:0;background:none;color:var(--muted);cursor:pointer;padding:0 10px;font:inherit;font-size:13px}

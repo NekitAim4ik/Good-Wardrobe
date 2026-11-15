@@ -1,12 +1,15 @@
+import { useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import type { ItemDetails } from '../../entities/item/model'
 import { useAuth } from '../../features/auth/AuthContext'
 import { Button } from '../../shared/ui/Button'
+import { MessageForm } from './MessageForm'
 
 
 export function ContactPanel({ item }: { item: ItemDetails }) {
   const { user } = useAuth()
   const location = useLocation()
+  const [writing, setWriting] = useState(false)
   const { viewer } = item
 
   if (viewer.isOwner) {
@@ -39,12 +42,12 @@ export function ContactPanel({ item }: { item: ItemDetails }) {
     )
   }
 
+  if (!viewer.canRequest) return <p className="contact__note">Написать автору сейчас нельзя.</p>
+  if (writing) return <MessageForm itemId={item.id} onCancel={() => setWriting(false)} />
   return (
     <>
-      <Button className="contact__btn" disabled={!viewer.canRequest} title="Переписка появится на следующем шаге">
-        Написать автору
-      </Button>
-      <p className="contact__note">Переписка с автором появится в следующем обновлении.</p>
+      <Button className="contact__btn" onClick={() => setWriting(true)}>Написать автору</Button>
+      <p className="contact__note">Автор увидит ваше сообщение и ответит в чате.</p>
     </>
   )
 }

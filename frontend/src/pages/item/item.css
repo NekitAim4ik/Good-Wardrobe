@@ -37,3 +37,6 @@
   .itempage__grid{grid-template-columns:1fr}
   .itempage__side{position:static}
 }
+
+.msgform .field{margin-bottom:12px}
+.msgform__actions{display:flex;gap:10px}
