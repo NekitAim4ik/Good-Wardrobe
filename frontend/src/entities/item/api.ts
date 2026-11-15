@@ -1,4 +1,5 @@
-import type { Item } from './model'
+import { http } from '../../shared/api/http'
+import type { Item, ItemDetails } from './model'
 
 const mock: Item[] = [
   { id: 1, title: 'Свитер, размер M', source: 'direct', distanceKm: 0.8, note: 'Хорошее состояние · Москва' },
@@ -11,3 +12,6 @@ const mock: Item[] = [
 export async function getNearbyItems(): Promise<Item[]> {
   return mock
 }
+
+// Карточка вещи. Если пользователь вошёл, в ответе есть блок viewer (клиент сам шлёт токен).
+export const getItem = (id: number) => http<ItemDetails>(`/items/${id}`)

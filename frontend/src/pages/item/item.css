@@ -1,0 +1,39 @@
+.itempage{padding-top:24px;padding-bottom:48px}
+.itempage__back{display:inline-block;margin-bottom:16px;color:var(--muted);text-decoration:none;font-size:14px}
+.itempage__back:hover{color:var(--ink)}
+.itempage__grid{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:32px;align-items:start}
+.itempage__side{display:grid;gap:16px;position:sticky;top:88px}
+.itempage__title{font-size:28px;margin-bottom:16px}
+.itempage__tags{margin-bottom:4px}
+.itempage__tags .tag{margin-right:6px}
+.itempage__block{margin-top:28px}
+.itempage__block h2{font-size:20px;margin-bottom:10px}
+.itempage__text{white-space:pre-wrap;overflow-wrap:anywhere}
+.itempage__empty{padding:48px 0}
+.itempage__empty h1{font-size:28px;margin-bottom:10px}
+.itempage__empty .btn{margin-top:12px;text-decoration:none}
+
+.facts{display:grid;grid-template-columns:auto 1fr;gap:8px 16px;margin:0 0 20px;font-size:14px}
+.facts dt{color:var(--muted)}
+.facts dd{margin:0;text-align:right;font-weight:500}
+
+.contact{display:grid;gap:10px}
+.contact__btn{justify-content:center;width:100%;height:46px;text-decoration:none}
+.contact__btn:disabled{opacity:.6;cursor:not-allowed}
+.contact__note{margin:0;font-size:13px;color:var(--muted);text-align:center}
+
+.owner{display:flex;gap:14px;align-items:center}
+.owner__avatar{display:grid;place-items:center;width:48px;height:48px;font-size:16px;font-weight:600;cursor:default;flex:none}
+.owner__meta{margin:2px 0 0;font-size:13px}
+
+.gallery__main{width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:var(--r);display:block;background:var(--soft)}
+.gallery__ph{aspect-ratio:4/3;border-radius:var(--r);background:var(--soft);display:grid;place-items:center;color:var(--muted)}
+.gallery__thumbs{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+.gallery__thumb{width:72px;height:72px;padding:0;border:2px solid transparent;border-radius:10px;overflow:hidden;cursor:pointer;background:var(--soft)}
+.gallery__thumb[aria-current="true"]{border-color:var(--brand)}
+.gallery__thumb img{width:100%;height:100%;object-fit:cover;display:block}
+
+@media (max-width:860px){
+  .itempage__grid{grid-template-columns:1fr}
+  .itempage__side{position:static}
+}
