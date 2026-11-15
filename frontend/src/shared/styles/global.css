@@ -90,3 +90,6 @@ p{margin:0 0 10px}
 
 /* Экран, пока проверяем, вошёл ли пользователь */
 .boot{min-height:100vh;display:grid;place-items:center;color:var(--muted)}
+
+.usermenu__link{margin-top:6px;padding:8px 0;border-top:1px solid var(--line);text-decoration:none;font-weight:500}
+.usermenu__link:hover{color:var(--brand)}

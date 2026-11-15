@@ -23,7 +23,7 @@ export interface DealSummaryDto {
   status: DealStatus
   role: DealRole
   item: DealItemDto
-  counterpart: PublicUserDto
+  counterpart: Pick<PublicUserDto, 'id' | 'name'>
   lastMessage: Pick<MessageDto, 'kind' | 'body' | 'createdAt'> | null
   unreadCount: number
   updatedAt: string

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { initials, roleLabels } from '../../entities/user/model'
 import { useAuth } from '../../features/auth/AuthContext'
 
@@ -31,6 +32,7 @@ export function UserMenu() {
           <strong>{user.name}</strong>
           <span className="muted">{user.email}</span>
           <span><span className="tag">{roleLabels[user.role]}</span> <span className="muted">Баллы: {user.points}</span></span>
+          <Link to="/deals" className="usermenu__link" onClick={() => setOpen(false)}>Чаты и сделки</Link>
           <button type="button" className="usermenu__out" onClick={() => { setOpen(false); logout() }}>Выйти</button>
         </div>
       )}
