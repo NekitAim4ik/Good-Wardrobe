@@ -1,5 +1,6 @@
 import { ApiError } from './apierror'
 
+
 const BASE = '/api'
 
 let accessToken: string | null = null
@@ -18,14 +19,15 @@ interface Options {
 
 async function send(path: string, { method = 'GET', body, auth = true }: Options): Promise<Response> {
   const headers: Record<string, string> = {}
-  if (body !== undefined) headers['Content-Type'] = 'application/json'
+  const isForm = body instanceof FormData
+  if (body !== undefined && !isForm) headers['Content-Type'] = 'application/json'
   if (auth && accessToken) headers.Authorization = `Bearer ${accessToken}`
   try {
     return await fetch(BASE + path, {
       method,
       headers,
       credentials: 'include', 
-      body: body === undefined ? undefined : JSON.stringify(body),
+      body: body === undefined ? undefined : isForm ? body : JSON.stringify(body),
     })
   } catch {
     throw new ApiError('Нет связи с сервером. Проверьте подключение и попробуйте снова.')
@@ -33,6 +35,7 @@ async function send(path: string, { method = 'GET', body, auth = true }: Options
 }
 
 async function toError(res: Response): Promise<ApiError> {
+  if (res.status === 413) return new ApiError('Файл слишком большой. Максимум — 5 МБ.')
   if (res.status === 429) return new ApiError('Слишком много попыток. Подождите минуту и попробуйте снова.')
   if (res.status >= 500) return new ApiError('Ошибка сервера. Попробуйте позже.')
   const body = (await res.json().catch(() => null)) as { message?: string | string[]; field?: string } | null

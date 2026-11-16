@@ -1,5 +1,5 @@
 import { http } from '../../shared/api/http'
-import type { Item, ItemDetails } from './model'
+import type { Item, ItemDetails, NewItemInput, UploadedPhoto } from './model'
 
 const mock: Item[] = [
   { id: 1, title: 'Свитер, размер M', source: 'direct', distanceKm: 0.8, note: 'Хорошее состояние · Москва' },
@@ -8,10 +8,16 @@ const mock: Item[] = [
   { id: 4, title: 'Набор посуды', source: 'point', sourceName: 'У дома', distanceKm: 2.1, note: 'Комплект на две персоны' },
 ]
 
-// Позже заменить на: fetch('/api/items?near=...').then(r => r.json())
 export async function getNearbyItems(): Promise<Item[]> {
   return mock
 }
 
-// Карточка вещи. Если пользователь вошёл, в ответе есть блок viewer (клиент сам шлёт токен).
 export const getItem = (id: number) => http<ItemDetails>(`/items/${id}`)
+
+export const createItem = (data: NewItemInput) => http<ItemDetails>('/items', { method: 'POST', body: data })
+
+export function uploadPhoto(file: File) {
+  const form = new FormData()
+  form.append('file', file)
+  return http<UploadedPhoto>('/uploads', { method: 'POST', body: form })
+}

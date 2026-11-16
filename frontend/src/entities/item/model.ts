@@ -10,6 +10,7 @@ export interface Item {
   imageUrl?: string
 }
 
+
 export type ItemStatus = 'published' | 'reserved' | 'transferred' | 'hidden' | 'rejected'
 export type ItemCondition = 'brand_new' | 'excellent' | 'good' | 'fair'
 export type TransferFormat = 'gift' | 'exchange'
@@ -64,4 +65,36 @@ export const statusNotices: Partial<Record<ItemStatus, string>> = {
   transferred: 'Эту вещь уже передали новому владельцу.',
   hidden: 'Объявление скрыто — его видите только вы.',
   rejected: 'Объявление отклонено модератором и не показывается в каталоге.',
+}
+
+export interface NewItemInput {
+  title: string
+  description: string
+  categoryId: number
+  condition: ItemCondition
+  transferFormat: TransferFormat
+  wantedInReturn?: string
+  quantity: number
+  weightKg?: number
+  districtId: number
+  meetingNote?: string
+  photoKeys: string[] 
+}
+
+export const ITEM_LIMITS = {
+  titleMin: 3, titleMax: 100,
+  descriptionMin: 10, descriptionMax: 2000,
+  wantedMax: 300, meetingNoteMax: 300,
+  quantityMax: 100, weightMaxKg: 1000,
+  photosMin: 1, photosMax: 5,
+} as const
+
+export const PHOTO_RULES = {
+  maxBytes: 5 * 1024 * 1024,
+  mimeTypes: ['image/jpeg', 'image/png', 'image/webp'],
+} as const
+
+export interface UploadedPhoto {
+  key: string
+  url: string
 }

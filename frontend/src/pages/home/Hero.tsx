@@ -1,9 +1,11 @@
 import { useState } from 'react'
+import { useGiveItem } from '../../features/give-item/useGiveItem'
 import { Button } from '../../shared/ui/Button'
 import { Icon } from '../../shared/ui/Icon'
 
 export function Hero() {
   const [noPhoto, setNoPhoto] = useState(false)
+  const giveItem = useGiveItem()
   return (
     <section className="container hero">
       <div className="hero__text">
@@ -12,7 +14,7 @@ export function Hero() {
         <p>Отдавайте то, чем больше не пользуетесь, и находите нужное рядом. В районном шкафу или прямо у соседей — бесплатно.</p>
         <div className="hero__cta">
           <Button icon="pin">Найти шкаф</Button>
-          <Button variant="outline" icon="plus">Отдать вещь</Button>
+          <Button variant="outline" icon="plus" onClick={giveItem}>Отдать вещь</Button>
         </div>
         <small className="muted">Без оплаты за вещи · С заботой о людях и природе</small>
       </div>
